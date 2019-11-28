@@ -375,6 +375,19 @@ class Application extends Container
      *
      * @return void
      */
+    protected function registerEventBindings()
+    {
+        $this->singleton('events', function () {
+            $this->register('Illuminate\Events\EventServiceProvider');
+            return $this->make('events');
+        });
+    }
+
+    /**
+     * Register container bindings for the application.
+     *
+     * @return void
+     */
     protected function registerTranslationBindings()
     {
         $this->singleton('translator', function () {
@@ -511,6 +524,7 @@ class Application extends Container
     {
         $defaults = [
             'Illuminate\Support\Facades\Cache' => 'Cache',
+            'Illuminate\Support\Facades\Event' => 'Event',
             'Illuminate\Support\Facades\Log' => 'Log',
             'Illuminate\Support\Facades\Storage' => 'Storage',
             'Illuminate\Support\Facades\Validator' => 'Validator',
@@ -636,6 +650,16 @@ class Application extends Container
     }
 
     /**
+     * Determine if the application events are cached.
+     *
+     * @return bool
+     */
+    public function eventsAreCached()
+    {
+        return false;
+    }
+
+    /**
      * Prepare the application to execute a console command.
      *
      * @param  bool  $aliases
@@ -716,6 +740,7 @@ class Application extends Container
             'Illuminate\Contracts\Config\Repository' => 'config',
             'Illuminate\Container\Container' => 'app',
             'Illuminate\Contracts\Container\Container' => 'app',
+            'Illuminate\Contracts\Events\Dispatcher' => 'events',
             'Illuminate\Contracts\Filesystem\Factory' => 'filesystem',
             'Illuminate\Contracts\Filesystem\Filesystem' => 'filesystem.disk',
             'Illuminate\Contracts\Filesystem\Cloud' => 'filesystem.cloud',
@@ -745,6 +770,8 @@ class Application extends Container
         'Illuminate\Contracts\Filesystem\Filesystem' => 'registerFilesystemBindings',
         'Illuminate\Contracts\Filesystem\Factory' => 'registerFilesystemBindings',
         'files' => 'registerFilesBindings',
+        'events' => 'registerEventBindings',
+        'Illuminate\Contracts\Events\Dispatcher' => 'registerEventBindings',
         'log' => 'registerLogBindings',
         'Psr\Log\LoggerInterface' => 'registerLogBindings',
         'translator' => 'registerTranslationBindings',
