@@ -9,7 +9,7 @@ if (! function_exists('app')) {
      *
      * @param  string|null  $make
      * @param  array  $parameters
-     * @return mixed|\Laravel\LumenWpApp\Application
+     * @return mixed|\LumenWpApp\Application
      */
     function app($make = null, array $parameters = [])
     {
