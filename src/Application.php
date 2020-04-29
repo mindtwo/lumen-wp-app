@@ -134,7 +134,7 @@ class Application extends Container
      */
     public function version()
     {
-        return 'Lumen (6.0.2) (Laravel Components ^6.0)';
+        return 'Lumen (7.1.1) (Laravel Components ^7.0)';
     }
 
     /**
@@ -573,6 +573,17 @@ class Application extends Container
     }
 
     /**
+     * Get the path to the application configuration files.
+     *
+     * @param  string  $path
+     * @return string
+     */
+    public function configPath($path = '')
+    {
+        return $this->basePath.DIRECTORY_SEPARATOR.'config'.($path ? DIRECTORY_SEPARATOR.$path : $path);
+    }
+
+    /**
      * Get the path to the database directory.
      *
      * @param  string  $path
@@ -636,7 +647,7 @@ class Application extends Container
      */
     public function runningInConsole()
     {
-        return php_sapi_name() === 'cli' || php_sapi_name() === 'phpdbg';
+        return \PHP_SAPI === 'cli' || \PHP_SAPI === 'phpdbg';
     }
 
     /**
@@ -724,6 +735,39 @@ class Application extends Container
         $this->router = null;
         $this->dispatcher = null;
         static::$instance = null;
+    }
+
+    /**
+     * Get the current application locale.
+     *
+     * @return string
+     */
+    public function getLocale()
+    {
+        return $this['config']->get('app.locale');
+    }
+
+    /**
+     * Set the current application locale.
+     *
+     * @param  string  $locale
+     * @return void
+     */
+    public function setLocale($locale)
+    {
+        $this['config']->set('app.locale', $locale);
+        $this['translator']->setLocale($locale);
+    }
+
+    /**
+     * Determine if application locale is the given locale.
+     *
+     * @param  string  $locale
+     * @return bool
+     */
+    public function isLocale($locale)
+    {
+        return $this->getLocale() == $locale;
     }
 
     /**
