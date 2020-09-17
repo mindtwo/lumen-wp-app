@@ -822,7 +822,7 @@ class Application extends Container
         'cache' => 'registerCacheBindings',
         'cache.store' => 'registerCacheBindings',
         CacheFactory::class => 'registerCacheBindings',
-        Repository::class => 'registerCacheBindings',
+        CacheRepository::class => 'registerCacheBindings',
         'config' => 'registerConfigBindings',
         'filesystem' => 'registerFilesystemBindings',
         'filesystem.cloud' => 'registerFilesystemBindings',
