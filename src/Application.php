@@ -2,14 +2,39 @@
 
 namespace LumenWpApp;
 
+use Illuminate\Contracts\Foundation\Application as FoundationApplication;
+use Illuminate\Cache\CacheServiceProvider;
 use Illuminate\Config\Repository as ConfigRepository;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Encryption\Encrypter;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Filesystem\Cloud;
+use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Contracts\Validation\Factory;
+use Illuminate\Encryption\EncryptionServiceProvider;
+use Illuminate\Events\EventServiceProvider;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Filesystem\FilesystemServiceProvider;
+use Illuminate\Contracts\Container\Container as ContainerContainer;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
+use Illuminate\Contracts\Filesystem\Filesystem as FilesystemFilesystem;
+use Illuminate\Hashing\HashServiceProvider;
 use Illuminate\Log\LogManager;
 use Illuminate\Support\Composer;
 use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Translation\TranslationServiceProvider;
+use Illuminate\Validation\ValidationServiceProvider;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 class Application extends Container
@@ -134,7 +159,7 @@ class Application extends Container
      */
     public function version()
     {
-        return 'Lumen (7.1.1) (Laravel Components ^7.0)';
+        return 'Lumen (8.0.1) (Laravel Components ^8.0)';
     }
 
     /**
@@ -173,10 +198,21 @@ class Application extends Container
     }
 
     /**
+     * Determine if the given service provider is loaded.
+     *
+     * @param  string  $provider
+     * @return bool
+     */
+    public function providerIsLoaded(string $provider)
+    {
+        return isset($this->loadedProviders[$provider]);
+    }
+
+    /**
      * Register a service provider with the application.
      *
      * @param  \Illuminate\Support\ServiceProvider|string  $provider
-     * @return \Illuminate\Support\ServiceProvider
+     * @return void
      */
     public function register($provider)
     {
@@ -207,7 +243,7 @@ class Application extends Container
      */
     public function registerDeferredProvider($provider)
     {
-        return $this->register($provider);
+        $this->register($provider);
     }
 
     /**
@@ -219,9 +255,9 @@ class Application extends Container
             return;
         }
 
-        array_walk($this->loadedProviders, function ($p) {
-            $this->bootProvider($p);
-        });
+        foreach ($this->loadedProviders as $provider) {
+            $this->bootProvider($provider);
+        }
 
         $this->booted = true;
     }
@@ -269,10 +305,10 @@ class Application extends Container
     protected function registerCacheBindings()
     {
         $this->singleton('cache', function () {
-            return $this->loadComponent('cache', 'Illuminate\Cache\CacheServiceProvider');
+            return $this->loadComponent('cache', CacheServiceProvider::class);
         });
         $this->singleton('cache.store', function () {
-            return $this->loadComponent('cache', 'Illuminate\Cache\CacheServiceProvider', 'cache.store');
+            return $this->loadComponent('cache', CacheServiceProvider::class, 'cache.store');
         });
     }
 
@@ -308,7 +344,7 @@ class Application extends Container
     protected function registerEncrypterBindings()
     {
         $this->singleton('encrypter', function () {
-            return $this->loadComponent('app', 'Illuminate\Encryption\EncryptionServiceProvider', 'encrypter');
+            return $this->loadComponent('app', EncryptionServiceProvider::class, 'encrypter');
         });
     }
 
@@ -332,13 +368,13 @@ class Application extends Container
     protected function registerFilesystemBindings()
     {
         $this->singleton('filesystem', function () {
-            return $this->loadComponent('filesystems', 'Illuminate\Filesystem\FilesystemServiceProvider', 'filesystem');
+            return $this->loadComponent('filesystems', FilesystemServiceProvider::class, 'filesystem');
         });
         $this->singleton('filesystem.disk', function () {
-            return $this->loadComponent('filesystems', 'Illuminate\Filesystem\FilesystemServiceProvider', 'filesystem.disk');
+            return $this->loadComponent('filesystems', FilesystemServiceProvider::class, 'filesystem.disk');
         });
         $this->singleton('filesystem.cloud', function () {
-            return $this->loadComponent('filesystems', 'Illuminate\Filesystem\FilesystemServiceProvider', 'filesystem.cloud');
+            return $this->loadComponent('filesystems', FilesystemServiceProvider::class, 'filesystem.cloud');
         });
     }
 
@@ -350,7 +386,7 @@ class Application extends Container
     protected function registerHashBindings()
     {
         $this->singleton('hash', function () {
-            $this->register('Illuminate\Hashing\HashServiceProvider');
+            $this->register(HashServiceProvider::class);
 
             return $this->make('hash');
         });
@@ -363,7 +399,7 @@ class Application extends Container
      */
     protected function registerLogBindings()
     {
-        $this->singleton('Psr\Log\LoggerInterface', function () {
+        $this->singleton(LoggerInterface::class, function () {
             $this->configure('logging');
 
             return new LogManager($this);
@@ -378,7 +414,7 @@ class Application extends Container
     protected function registerEventBindings()
     {
         $this->singleton('events', function () {
-            $this->register('Illuminate\Events\EventServiceProvider');
+            $this->register(EventServiceProvider::class);
             return $this->make('events');
         });
     }
@@ -395,7 +431,7 @@ class Application extends Container
 
             $this->instance('path.lang', $this->getLanguagePath());
 
-            $this->register('Illuminate\Translation\TranslationServiceProvider');
+            $this->register(TranslationServiceProvider::class);
 
             return $this->make('translator');
         });
@@ -423,7 +459,7 @@ class Application extends Container
     protected function registerValidatorBindings()
     {
         $this->singleton('validator', function () {
-            $this->register('Illuminate\Validation\ValidationServiceProvider');
+            $this->register(ValidationServiceProvider::class);
 
             return $this->make('validator');
         });
@@ -523,11 +559,11 @@ class Application extends Container
     public function withAliases($userAliases = [])
     {
         $defaults = [
-            'Illuminate\Support\Facades\Cache' => 'Cache',
-            'Illuminate\Support\Facades\Event' => 'Event',
-            'Illuminate\Support\Facades\Log' => 'Log',
-            'Illuminate\Support\Facades\Storage' => 'Storage',
-            'Illuminate\Support\Facades\Validator' => 'Validator',
+            Cache::class => 'Cache',
+            Event::class => 'Event',
+            Log::class => 'Log',
+            Storage::class => 'Storage',
+            Validator::class => 'Validator',
         ];
 
         if (! static::$aliasesRegistered) {
@@ -671,25 +707,6 @@ class Application extends Container
     }
 
     /**
-     * Prepare the application to execute a console command.
-     *
-     * @param  bool  $aliases
-     * @return void
-     */
-    public function prepareForConsoleCommand($aliases = true)
-    {
-        $this->withFacades($aliases);
-
-        $this->make('cache');
-        $this->make('queue');
-
-        $this->configure('database');
-
-        $this->register('Illuminate\Database\MigrationServiceProvider');
-        $this->register('Laravel\Lumen\Console\ConsoleServiceProvider');
-    }
-
-    /**
      * Get the application namespace.
      *
      * @return string
@@ -778,20 +795,20 @@ class Application extends Container
     protected function registerContainerAliases()
     {
         $this->aliases = [
-            'Illuminate\Contracts\Foundation\Application' => 'app',
-            'Illuminate\Contracts\Cache\Factory' => 'cache',
-            'Illuminate\Contracts\Cache\Repository' => 'cache.store',
-            'Illuminate\Contracts\Config\Repository' => 'config',
-            'Illuminate\Container\Container' => 'app',
-            'Illuminate\Contracts\Container\Container' => 'app',
-            'Illuminate\Contracts\Events\Dispatcher' => 'events',
-            'Illuminate\Contracts\Filesystem\Factory' => 'filesystem',
-            'Illuminate\Contracts\Filesystem\Filesystem' => 'filesystem.disk',
-            'Illuminate\Contracts\Filesystem\Cloud' => 'filesystem.cloud',
-            'Illuminate\Contracts\Hashing\Hasher' => 'hash',
-            'log' => 'Psr\Log\LoggerInterface',
-            'Illuminate\Contracts\Translation\Translator' => 'translator',
-            'Illuminate\Contracts\Validation\Factory' => 'validator',
+            FoundationApplication::class => 'app',
+            CacheFactory::class => 'cache',
+            CacheRepository::class => 'cache.store',
+            ConfigRepository::class => 'config',
+            Container::class => 'app',
+            ContainerContainer::class => 'app',
+            Dispatcher::class => 'events',
+            FilesystemFactory::class => 'filesystem',
+            FilesystemFilesystem::class => 'filesystem.disk',
+            Cloud::class => 'filesystem.cloud',
+            Hasher::class => 'hash',
+            'log' => LoggerInterface::class,
+            Translator::class => 'translator',
+            Factory::class => 'validator',
         ];
     }
 
@@ -804,26 +821,26 @@ class Application extends Container
         'composer' => 'registerComposerBindings',
         'cache' => 'registerCacheBindings',
         'cache.store' => 'registerCacheBindings',
-        'Illuminate\Contracts\Cache\Factory' => 'registerCacheBindings',
-        'Illuminate\Contracts\Cache\Repository' => 'registerCacheBindings',
+        CacheFactory::class => 'registerCacheBindings',
+        Repository::class => 'registerCacheBindings',
         'config' => 'registerConfigBindings',
         'filesystem' => 'registerFilesystemBindings',
         'filesystem.cloud' => 'registerFilesystemBindings',
         'filesystem.disk' => 'registerFilesystemBindings',
-        'Illuminate\Contracts\Filesystem\Cloud' => 'registerFilesystemBindings',
-        'Illuminate\Contracts\Filesystem\Filesystem' => 'registerFilesystemBindings',
-        'Illuminate\Contracts\Filesystem\Factory' => 'registerFilesystemBindings',
+        Cloud::class => 'registerFilesystemBindings',
+        FilesystemFilesystem::class => 'registerFilesystemBindings',
+        FilesystemFactory::class => 'registerFilesystemBindings',
         'files' => 'registerFilesBindings',
         'events' => 'registerEventBindings',
-        'Illuminate\Contracts\Events\Dispatcher' => 'registerEventBindings',
+        Dispatcher::class => 'registerEventBindings',
         'log' => 'registerLogBindings',
-        'Psr\Log\LoggerInterface' => 'registerLogBindings',
+        LoggerInterface::class => 'registerLogBindings',
         'translator' => 'registerTranslationBindings',
         'encrypter' => 'registerEncrypterBindings',
-        'Illuminate\Contracts\Encryption\Encrypter' => 'registerEncrypterBindings',
+        Encrypter::class => 'registerEncrypterBindings',
         'hash' => 'registerHashBindings',
-        'Illuminate\Contracts\Hashing\Hasher' => 'registerHashBindings',
+        Hasher::class => 'registerHashBindings',
         'validator' => 'registerValidatorBindings',
-        'Illuminate\Contracts\Validation\Factory' => 'registerValidatorBindings',
+        Factory::class => 'registerValidatorBindings',
     ];
 }

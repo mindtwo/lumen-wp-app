@@ -1,6 +1,6 @@
 <?php
 
-namespace LumenWpApp;
+namespace Laravel\Lumen\Bootstrap;
 
 use Dotenv\Dotenv;
 use Dotenv\Exception\InvalidFileException;
@@ -83,6 +83,6 @@ class LoadEnvironmentVariables
             $output->writeln($error);
         }
 
-        die(1);
+        exit(1);
     }
 }
