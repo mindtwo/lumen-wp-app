@@ -18,7 +18,7 @@
         }
     ],
     "require": {
-        "php" : "^7.3",
+        "php" : ">=7.4",
         "vlucas/phpdotenv": "^5.2",
         "symfony/var-dumper": "^5.1",
         "symfony/error-handler": "^5.1",
