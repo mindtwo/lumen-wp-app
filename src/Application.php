@@ -159,7 +159,7 @@ class Application extends Container
      */
     public function version()
     {
-        return 'Lumen (8.0.1) (Laravel Components ^8.0)';
+        return 'Lumen (10.0.0) (Laravel Components ^10.0)';
     }
 
     /**
@@ -195,6 +195,26 @@ class Application extends Container
         }
 
         return $env;
+    }
+
+    /**
+     * Determine if the application is in the local environment.
+     *
+     * @return bool
+     */
+    public function isLocal()
+    {
+        return $this->environment() === 'local';
+    }
+
+    /**
+     * Determine if the application is in the production environment.
+     *
+     * @return bool
+     */
+    public function isProduction()
+    {
+        return $this->environment() === 'production';
     }
 
     /**
@@ -762,6 +782,16 @@ class Application extends Container
     public function getLocale()
     {
         return $this['config']->get('app.locale');
+    }
+
+    /**
+     * Get the current application fallback locale.
+     *
+     * @return string
+     */
+    public function getFallbackLocale()
+    {
+        return $this['config']->get('app.fallback_locale');
     }
 
     /**
