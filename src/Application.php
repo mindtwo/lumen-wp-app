@@ -37,9 +37,6 @@ use Illuminate\Validation\ValidationServiceProvider;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-/**
- *
- */
 class Application extends Container
 {
     /**
@@ -162,7 +159,7 @@ class Application extends Container
      */
     public function version()
     {
-        return 'Lumen (10.0) (Laravel Components ^10.0)';
+        return 'Lumen (8.0.1) (Laravel Components ^8.0)';
     }
 
     /**
@@ -788,14 +785,6 @@ class Application extends Container
     public function isLocale($locale)
     {
         return $this->getLocale() == $locale;
-    }
-
-    /**
-     * @return Application|mixed
-     */
-    public static function getFallbackLocale()
-    {
-        return config('app.fallback_locale', 'en');
     }
 
     /**
